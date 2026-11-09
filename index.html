@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0f172a" />
+<title>預算規劃器 · Budget Planner</title>
+<style>
+:root {
+  --bg: #f4f6fb;
+  --bg2: #ffffff;
+  --bg3: #eef2f8;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --accent: #2563eb;
+  --accent2: #7c3aed;
+  --good: #059669;
+  --warn: #d97706;
+  --bad: #dc2626;
+  --shadow: 0 8px 28px rgba(15,23,42,.08);
+  --radius: 16px;
+  --font: "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+[data-theme="dark"] {
+  --bg: #0b1220;
+  --bg2: #111827;
+  --bg3: #1e293b;
+  --text: #e5eefc;
+  --muted: #94a3b8;
+  --border: #243044;
+  --accent: #60a5fa;
+  --accent2: #a78bfa;
+  --good: #34d399;
+  --warn: #fbbf24;
+  --bad: #f87171;
+  --shadow: 0 10px 32px rgba(0,0,0,.35);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font);
+  background: radial-gradient(1200px 600px at 10% -10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent),
+              radial-gradient(900px 500px at 100% 0%, color-mix(in srgb, var(--accent2) 14%, transparent), transparent),
+              var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.app { max-width: 1100px; margin: 0 auto; padding: 16px 16px 80px; }
+header.appbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-bottom: 18px; flex-wrap: wrap;
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo {
+  width: 42px; height: 42px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 18px;
+  box-shadow: var(--shadow);
+}
+.brand h1 { margin: 0; font-size: 1.25rem; letter-spacing: .02em; }
+.brand p { margin: 0; color: var(--muted); font-size: .85rem; }
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn {
+  border: 1px solid var(--border); background: var(--bg2); color: var(--text);
+  border-radius: 999px; padding: 8px 14px; font-size: .9rem;
+  transition: .15s ease;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff; border: none; font-weight: 600;
+}
+.btn.ghost { background: transparent; }
+.btn.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 35%, var(--border)); }
+.btn.sm { padding: 5px 10px; font-size: .8rem; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.grid { display: grid; gap: 14px; grid-template-columns: 1fr; }
+@media (min-width: 900px) {
+  .grid { grid-template-columns: 1.1fr .9fr; align-items: start; }
+  .span2 { grid-column: 1 / -1; }
+}
+.card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; box-shadow: var(--shadow);
+}
+.card h2 {
+  margin: 0 0 12px; font-size: 1.05rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.hint { color: var(--muted); font-size: .82rem; margin: 0 0 12px; }
+.example-tag {
+  display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .04em;
+  color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
+  padding: 2px 8px; border-radius: 999px; vertical-align: middle;
+}
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 110px; }
+.field label { font-size: .78rem; color: var(--muted); }
+.field input, .field select {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 10px;
+  padding: 9px 11px; outline: none; width: 100%;
+}
+.field input:focus, .field select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.income-item, .alloc-item, .rec-item {
+  display: grid; gap: 8px; align-items: end;
+  padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg3);
+  margin-bottom: 8px;
+}
+.income-item { grid-template-columns: 1.4fr 1fr auto; }
+.alloc-item { grid-template-columns: 1.2fr .7fr .8fr auto; }
+.rec-item { grid-template-columns: 1.1fr .7fr .8fr .6fr .55fr auto; }
+@media (max-width: 720px) {
+  .income-item, .alloc-item, .rec-item { grid-template-columns: 1fr 1fr; }
+  .income-item .del, .alloc-item .del, .rec-item .del { grid-column: 1 / -1; justify-self: end; }
+  .rec-item .cat-field { grid-column: 1 / -1; }
+}
+.templates { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.chip {
+  border: 1px solid var(--border); background: var(--bg3); border-radius: 999px;
+  padding: 6px 12px; font-size: .82rem;
+}
+.chip.active {
+  background: color-mix(in srgb, var(--accent) 18%, var(--bg2));
+  border-color: var(--accent); color: var(--accent); font-weight: 600;
+}
+.summary { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+@media (min-width: 700px) { .summary { grid-template-columns: repeat(4, 1fr); } }
+.kpi {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 12px;
+  box-shadow: var(--shadow);
+}
+.kpi .label { color: var(--muted); font-size: .78rem; }
+.kpi .val { font-size: 1.1rem; font-weight: 700; margin-top: 2px; word-break: break-all; }
+.kpi.good .val { color: var(--good); }
+.kpi.warn .val { color: var(--warn); }
+.kpi.bad .val { color: var(--bad); }
+.chart-wrap { display: grid; grid-template-columns: 1fr; gap: 12px; align-items: center; }
+@media (min-width: 560px) { .chart-wrap { grid-template-columns: 220px 1fr; } }
+.donut { width: 200px; height: 200px; margin: 0 auto; position: relative; }
+.donut svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.donut-center {
+  position: absolute; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none;
+}
+.donut-center strong { display: block; font-size: 1.05rem; }
+.donut-center span { color: var(--muted); font-size: .78rem; }
+.legend { display: flex; flex-direction: column; gap: 6px; }
+.legend-row { display: flex; align-items: center; gap: 8px; font-size: .88rem; }
+.swatch { width: 10px; height: 10px; border-radius: 3px; flex: 0 0 auto; }
+.bar { height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; margin-top: 10px; }
+.bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); width: 0%; transition: width .25s ease; }
+.bar.over > i { background: linear-gradient(90deg, var(--bad), var(--warn)); }
+.alert {
+  margin-top: 10px; padding: 10px 12px; border-radius: 12px; font-size: .88rem;
+  border: 1px solid transparent;
+}
+.alert.warn { background: color-mix(in srgb, var(--warn) 14%, transparent); border-color: color-mix(in srgb, var(--warn) 35%, transparent); color: var(--warn); }
+.alert.bad { background: color-mix(in srgb, var(--bad) 12%, transparent); border-color: color-mix(in srgb, var(--bad) 30%, transparent); color: var(--bad); }
+.alert.good { background: color-mix(in srgb, var(--good) 12%, transparent); border-color: color-mix(in srgb, var(--good) 30%, transparent); color: var(--good); }
+.list { display: flex; flex-direction: column; gap: 8px; }
+.due {
+  display: flex; justify-content: space-between; gap: 10px; align-items: center;
+  padding: 10px 12px; border-radius: 12px; background: var(--bg3); border: 1px solid var(--border);
+}
+.due .when { color: var(--muted); font-size: .82rem; }
+.footer-note { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 18px; }
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; place-items: center; z-index: 50; padding: 16px;
+}
+.modal-backdrop.show { display: grid; }
+.modal {
+  width: min(420px, 100%); background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 16px; padding: 16px; box-shadow: var(--shadow);
+}
+.modal h3 { margin: 0 0 8px; }
+.modal p { margin: 0 0 14px; color: var(--muted); font-size: .9rem; }
+.hidden { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+.subamt { font-size: .75rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="appbar">
+    <div class="brand">
+      <div class="logo">$</div>
+      <div>
+        <h1>預算規劃器</h1>
+        <p>薪水進來怎麼分 · 定期支出也能算</p>
+      </div>
+    </div>
+    <div class="toolbar">
+      <button class="btn ghost" id="btnTheme" type="button" title="切換主題">🌓 主題</button>
+      <button class="btn ghost" id="btnExport" type="button">匯出 JSON</button>
+      <button class="btn ghost" id="btnImport" type="button">匯入</button>
+      <button class="btn danger" id="btnReset" type="button">重置</button>
+      <input type="file" id="importFile" class="sr-only" accept="application/json,.json" />
+    </div>
+  </header>
+
+  <div class="summary" id="summary"></div>
+
+  <div class="grid">
+    <section class="card" id="incomeCard">
+      <h2>本月收入 <span class="example-tag" id="exampleBadge">範例資料</span></h2>
+      <p class="hint">可加入多筆收入（薪水、獎金、接案…）。數字皆為新台幣（TWD）。</p>
+      <div id="incomeList"></div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn" id="btnAddIncome" type="button">＋ 新增收入</button>
+        <button class="btn ghost" id="btnClearExample" type="button">清除範例、從頭填</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>分配預覽</h2>
+      <p class="hint">即時計算。可自由運用＝收入 − 定期支出月均 − 分配總額。</p>
+      <div class="chart-wrap">
+        <div class="donut">
+          <svg id="donutSvg" viewBox="0 0 120 120" aria-hidden="true"></svg>
+          <div class="donut-center">
+            <div>
+              <strong id="donutCenterVal">—</strong>
+              <span id="donutCenterLabel">可自由運用</span>
+            </div>
+          </div>
+        </div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="bar" id="allocBar"><i id="allocBarFill"></i></div>
+      <div id="allocAlert"></div>
+    </section>
+
+    <section class="card span2">
+      <h2>薪水分配</h2>
+      <p class="hint">選模板快速套用，也可改成自訂比例或固定金額。</p>
+      <div class="templates" id="templates">
+        <button class="chip" data-tpl="503020" type="button">50/30/20</button>
+        <button class="chip" data-tpl="jars" type="button">六罐子法</button>
+        <button class="chip" data-tpl="custom" type="button">自訂</button>
+      </div>
+      <div id="allocList"></div>
+      <div class="row">
+        <button class="btn" id="btnAddAlloc" type="button">＋ 新增類別</button>
+        <span class="hint" id="allocMeta" style="margin:0"></span>
+      </div>
+    </section>
+
+    <section class="card span2">
+      <h2>定期要繳的費用</h2>
+      <p class="hint">設定房租、保險、訂閱等。非每月繳的會換算「每月需預留」。</p>
+      <div id="recList"></div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn" id="btnAddRec" type="button">＋ 新增定期支出</button>
+        <span class="hint" id="recMeta" style="margin:0"></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>本月／未來 30 天到期</h2>
+      <p class="hint">依繳費日推算即將到期項目（含每 N 個月、每年、每週）。</p>
+      <div class="list" id="dueList"></div>
+    </section>
+
+    <section class="card">
+      <h2>怎麼用</h2>
+      <ol style="margin:0; padding-left:18px; color:var(--muted); font-size:.9rem">
+        <li>先填本月總收入（薪水＋其他）。</li>
+        <li>選分配模板，或自己改比例／金額。</li>
+        <li>把房租、保險、訂閱加進定期支出。</li>
+        <li>看上方摘要：收入 − 定期 − 分配 ＝ 可自由運用。</li>
+        <li>資料存在本機瀏覽器；可匯出 JSON 備份。</li>
+      </ol>
+      <p class="hint" style="margin-top:12px;margin-bottom:0">提醒：若「必要開支」分配已含房租，請避免把房租再重複算進分配，或把分配改成扣除定期後的剩餘再分。</p>
+    </section>
+  </div>
+
+  <p class="footer-note">資料僅存於你的裝置（localStorage）· 預算規劃器</p>
+</div>
+
+<div class="modal-backdrop" id="confirmModal" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3 id="confirmTitle">確認</h3>
+    <p id="confirmMsg"></p>
+    <div class="row" style="justify-content:flex-end">
+      <button class="btn ghost" id="confirmCancel" type="button">取消</button>
+      <button class="btn danger" id="confirmOk" type="button">確定</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const STORAGE_KEY = 'budget-planner-v1';
+  const COLORS = ['#2563eb','#7c3aed','#059669','#d97706','#db2777','#0891b2','#4f46e5','#ea580c','#16a34a','#9333ea'];
+
+  const TPL = {
+    '503020': [
+      { name: '必要開支', mode: 'pct', value: 50 },
+      { name: '想要／生活', mode: 'pct', value: 30 },
+      { name: '儲蓄與投資', mode: 'pct', value: 20 },
+    ],
+    jars: [
+      { name: '日常開銷', mode: 'pct', value: 55 },
+      { name: '娛樂休閒', mode: 'pct', value: 10 },
+      { name: '教育成長', mode: 'pct', value: 10 },
+      { name: '長期儲蓄', mode: 'pct', value: 10 },
+      { name: '財務自由', mode: 'pct', value: 10 },
+      { name: '給予／捐贈', mode: 'pct', value: 5 },
+    ],
+  };
+
+  const EXAMPLE = {
+    isExample: true,
+    theme: 'light',
+    template: 'custom',
+    incomes: [
+      { id: 'i1', name: '薪水', amount: 50000 },
+      { id: 'i2', name: '接案／獎金', amount: 5000 },
+    ],
+    // 範例：定期支出另計，故分配不設滿 100%，避免與房租等重複計算
+    allocations: [
+      { id: 'a1', name: '生活費（不含房租）', mode: 'pct', value: 25 },
+      { id: 'a2', name: '想要／娛樂', mode: 'pct', value: 10 },
+      { id: 'a3', name: '儲蓄與投資', mode: 'pct', value: 20 },
+    ],
+    recurrings: [
+      { id: 'r1', name: '房租', amount: 18000, freq: 'monthly', everyN: 1, category: '居住', dueDay: 1 },
+      { id: 'r2', name: '網路費', amount: 999, freq: 'monthly', everyN: 1, category: '生活', dueDay: 8 },
+      { id: 'r3', name: '串流訂閱', amount: 390, freq: 'monthly', everyN: 1, category: '娛樂', dueDay: 15 },
+      { id: 'r4', name: '機車保險', amount: 3600, freq: 'yearly', everyN: 1, category: '保險', dueDay: 20 },
+      { id: 'r5', name: '健身月費', amount: 1200, freq: 'monthly', everyN: 1, category: '健康', dueDay: 5 },
+    ],
+  };
+
+  let state = loadState();
+
+  const $ = (s, el = document) => el.querySelector(s);
+  const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+  const uid = () => 'id' + Math.random().toString(36).slice(2, 9);
+  const fmt = (n) => 'NT$ ' + Math.round(Number(n) || 0).toLocaleString('zh-TW');
+  const num = (v) => {
+    const n = Number(String(v).replace(/,/g, ''));
+    return Number.isFinite(n) ? n : 0;
+  };
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[c]);
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return structuredClone(EXAMPLE);
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.incomes)) return structuredClone(EXAMPLE);
+      return parsed;
+    } catch {
+      return structuredClone(EXAMPLE);
+    }
+  }
+  function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+  function applyTheme() {
+    const t = state.theme === 'dark' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', t === 'dark' ? '#0b1220' : '#f4f6fb');
+  }
+  function markUser() { state.isExample = false; }
+
+  function totalIncome() {
+    return state.incomes.reduce((s, x) => s + num(x.amount), 0);
+  }
+  function monthlyOf(r) {
+    const amt = num(r.amount);
+    switch (r.freq) {
+      case 'weekly': return amt * 52 / 12;
+      case 'yearly': return amt / 12;
+      case 'every_n': {
+        const n = Math.max(1, num(r.everyN) || 1);
+        return amt / n;
+      }
+      case 'monthly':
+      default: return amt;
+    }
+  }
+  function totalRecurringMonthly() {
+    return state.recurrings.reduce((s, r) => s + monthlyOf(r), 0);
+  }
+  function allocAmounts(income) {
+    return state.allocations.map(a => {
+      const amount = a.mode === 'fixed' ? num(a.value) : income * (num(a.value) / 100);
+      return { ...a, amount };
+    });
+  }
+  function totalAllocated(income) {
+    return allocAmounts(income).reduce((s, a) => s + a.amount, 0);
+  }
+
+  function dueDatesInRange(r, from, to) {
+    const dueDay = Math.min(28, Math.max(1, parseInt(r.dueDay, 10) || 1));
+    const out = [];
+    const start = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+    const end = new Date(to.getFullYear(), to.getMonth(), to.getDate());
+
+    if (r.freq === 'weekly') {
+      const wd = ((dueDay - 1) % 7); // 0=Mon
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const js = (d.getDay() + 6) % 7;
+        if (js === wd) out.push(new Date(d));
+      }
+      return out;
+    }
+
+    let y = start.getFullYear(), m = start.getMonth();
+    const endY = end.getFullYear(), endM = end.getMonth();
+    while (y < endY || (y === endY && m <= endM)) {
+      const last = new Date(y, m + 1, 0).getDate();
+      const day = Math.min(dueDay, last);
+      const dt = new Date(y, m, day);
+      if (dt >= start && dt <= end) {
+        let include = true;
+        if (r.freq === 'yearly') {
+          const dueMonth = Math.min(12, Math.max(1, num(r.everyN) || 1)) - 1;
+          include = (m === dueMonth);
+        } else if (r.freq === 'every_n') {
+          const n = Math.max(1, num(r.everyN) || 1);
+          const months = y * 12 + m;
+          include = (months % n === 0);
+        }
+        if (include) out.push(dt);
+      }
+      m++;
+      if (m > 11) { m = 0; y++; }
+    }
+    return out;
+  }
+
+  function upcomingDues() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const end = new Date(today);
+    end.setDate(end.getDate() + 30);
+    const items = [];
+    for (const r of state.recurrings) {
+      for (const d of dueDatesInRange(r, today, end)) {
+        items.push({
+          name: r.name,
+          amount: num(r.amount),
+          date: d,
+          category: r.category || '',
+          monthly: monthlyOf(r),
+          freq: r.freq
+        });
+      }
+    }
+    items.sort((a, b) => a.date - b.date);
+    return items;
+  }
+
+  function renderSummary() {
+    const income = totalIncome();
+    const rec = totalRecurringMonthly();
+    const alloc = totalAllocated(income);
+    const free = income - rec - alloc;
+    const over = free < -0.5;
+    $('#summary').innerHTML = `
+      <div class="kpi"><div class="label">本月收入</div><div class="val">${fmt(income)}</div></div>
+      <div class="kpi"><div class="label">定期支出（月均）</div><div class="val">${fmt(rec)}</div></div>
+      <div class="kpi"><div class="label">分配總額</div><div class="val">${fmt(alloc)}</div></div>
+      <div class="kpi ${over ? 'bad' : free < income * 0.05 ? 'warn' : 'good'}">
+        <div class="label">可自由運用</div><div class="val">${fmt(free)}</div>
+      </div>`;
+  }
+
+  function renderIncome() {
+    const list = $('#incomeList');
+    list.innerHTML = '';
+    state.incomes.forEach((inc, idx) => {
+      const div = document.createElement('div');
+      div.className = 'income-item';
+      div.innerHTML = `
+        <div class="field"><label>名稱</label><input data-k="name" value="${esc(inc.name)}" /></div>
+        <div class="field"><label>金額（TWD）</label><input data-k="amount" inputmode="decimal" value="${inc.amount}" /></div>
+        <button class="btn sm danger del" type="button" ${state.incomes.length <= 1 ? 'disabled' : ''}>刪除</button>`;
+      div.querySelector('[data-k="name"]').addEventListener('input', e => {
+        inc.name = e.target.value; markUser(); saveState();
+        $('#exampleBadge').classList.toggle('hidden', !state.isExample);
+      });
+      const amtInput = div.querySelector('[data-k="amount"]');
+      amtInput.addEventListener('input', e => {
+        inc.amount = num(e.target.value); markUser(); saveState(); renderSoft();
+      });
+      amtInput.addEventListener('change', e => {
+        inc.amount = num(e.target.value); markUser(); saveRender();
+      });
+      div.querySelector('.del').addEventListener('click', () => {
+        if (state.incomes.length <= 1) return;
+        state.incomes.splice(idx, 1); markUser(); saveRender();
+      });
+      list.appendChild(div);
+    });
+    $('#exampleBadge').classList.toggle('hidden', !state.isExample);
+  }
+
+  function renderAlloc() {
+    $$('#templates .chip').forEach(c => c.classList.toggle('active', c.dataset.tpl === state.template));
+    const income = totalIncome();
+    const list = $('#allocList');
+    list.innerHTML = '';
+    let pctSum = 0;
+    state.allocations.forEach((a, idx) => {
+      if (a.mode === 'pct') pctSum += num(a.value);
+      const amount = a.mode === 'fixed' ? num(a.value) : income * num(a.value) / 100;
+      const div = document.createElement('div');
+      div.className = 'alloc-item';
+      div.innerHTML = `
+        <div class="field"><label>類別</label><input data-k="name" value="${esc(a.name)}" /></div>
+        <div class="field"><label>方式</label>
+          <select data-k="mode">
+            <option value="pct" ${a.mode === 'pct' ? 'selected' : ''}>比例 %</option>
+            <option value="fixed" ${a.mode === 'fixed' ? 'selected' : ''}>固定金額</option>
+          </select>
+        </div>
+        <div class="field"><label>${a.mode === 'pct' ? '比例 (%)' : '金額'}</label>
+          <input data-k="value" inputmode="decimal" value="${a.value}" />
+          <span class="subamt">${fmt(amount)}</span>
+        </div>
+        <button class="btn sm danger del" type="button">刪除</button>`;
+      div.querySelector('[data-k="name"]').addEventListener('input', e => {
+        a.name = e.target.value; markUser(); saveState(); renderSoft();
+      });
+      div.querySelector('[data-k="mode"]').addEventListener('change', e => {
+        a.mode = e.target.value; state.template = 'custom'; markUser(); saveRender();
+      });
+      const valInput = div.querySelector('[data-k="value"]');
+      valInput.addEventListener('input', e => {
+        a.value = num(e.target.value); state.template = 'custom'; markUser(); saveState(); renderSoft();
+      });
+      valInput.addEventListener('change', e => {
+        a.value = num(e.target.value); state.template = 'custom'; markUser(); saveRender();
+      });
+      div.querySelector('.del').addEventListener('click', () => {
+        state.allocations.splice(idx, 1); state.template = 'custom'; markUser(); saveRender();
+      });
+      list.appendChild(div);
+    });
+    updateAllocMeta(income, pctSum);
+  }
+
+  function updateAllocMeta(income, pctSum) {
+    if (pctSum == null) {
+      pctSum = state.allocations.filter(a => a.mode === 'pct').reduce((s, a) => s + num(a.value), 0);
+    }
+    const alloc = totalAllocated(income);
+    const rec = totalRecurringMonthly();
+    const free = income - rec - alloc;
+    $('#allocMeta').textContent = `比例合計（僅 % 項）：${pctSum.toFixed(1)}% · 分配 ${fmt(alloc)}`;
+    const ratio = income > 0 ? Math.min(100, ((alloc + rec) / income) * 100) : 0;
+    $('#allocBarFill').style.width = ratio + '%';
+    $('#allocBar').classList.toggle('over', free < -0.5);
+    const alert = $('#allocAlert');
+    if (income <= 0) {
+      alert.innerHTML = `<div class="alert warn">請先填寫本月收入。</div>`;
+    } else if (free < -0.5) {
+      alert.innerHTML = `<div class="alert bad">超支 ${fmt(Math.abs(free))}：分配＋定期支出已超過收入，請調降比例或固定支出。</div>`;
+    } else if (pctSum > 100.05) {
+      alert.innerHTML = `<div class="alert warn">比例合計超過 100%（目前 ${pctSum.toFixed(1)}%）。</div>`;
+    } else if (free < income * 0.05) {
+      alert.innerHTML = `<div class="alert warn">可自由運用偏低（少於收入 5%），緩衝空間有限。</div>`;
+    } else {
+      alert.innerHTML = `<div class="alert good">配置看起來沒問題，還剩 ${fmt(free)} 可彈性運用。</div>`;
+    }
+    drawDonut(income, alloc, rec, free);
+  }
+
+  function drawDonut(income, alloc, rec, free) {
+    const svg = $('#donutSvg');
+    const R = 48, C = 2 * Math.PI * R;
+    const parts = [];
+    allocAmounts(income).forEach((a, i) => {
+      if (a.amount > 0) parts.push({ label: a.name, value: a.amount, color: COLORS[i % COLORS.length] });
+    });
+    if (rec > 0) parts.push({ label: '定期支出（月均）', value: rec, color: '#64748b' });
+    if (free > 0) parts.push({ label: '可自由運用', value: free, color: '#34d399' });
+    if (free < 0) parts.push({ label: '超支', value: Math.abs(free), color: '#f87171' });
+
+    const total = parts.reduce((s, p) => s + p.value, 0) || 1;
+    let offset = 0;
+    let html = `<circle cx="60" cy="60" r="${R}" fill="none" stroke="var(--border)" stroke-width="14" />`;
+    parts.forEach(p => {
+      const len = (p.value / total) * C;
+      html += `<circle cx="60" cy="60" r="${R}" fill="none" stroke="${p.color}" stroke-width="14"
+        stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-offset}" stroke-linecap="butt" />`;
+      offset += len;
+    });
+    svg.innerHTML = html;
+    $('#donutCenterVal').textContent = fmt(free);
+    $('#donutCenterLabel').textContent = free < 0 ? '超支' : '可自由運用';
+    $('#legend').innerHTML = parts.map(p => `
+      <div class="legend-row">
+        <span class="swatch" style="background:${p.color}"></span>
+        <span style="flex:1">${esc(p.label)}</span>
+        <strong>${fmt(p.value)}</strong>
+      </div>`).join('') || '<div class="hint">尚無資料</div>';
+  }
+
+  function renderRec() {
+    const list = $('#recList');
+    list.innerHTML = '';
+    state.recurrings.forEach((r, idx) => {
+      const div = document.createElement('div');
+      div.className = 'rec-item';
+      const mEq = monthlyOf(r);
+      const nLabel = r.freq === 'every_n' ? '每幾個月'
+        : r.freq === 'yearly' ? '幾月到期'
+        : r.freq === 'weekly' ? '星期幾(1=一)'
+        : '—';
+      div.innerHTML = `
+        <div class="field"><label>名稱</label><input data-k="name" value="${esc(r.name)}" /></div>
+        <div class="field"><label>金額</label><input data-k="amount" inputmode="decimal" value="${r.amount}" /></div>
+        <div class="field"><label>頻率</label>
+          <select data-k="freq">
+            <option value="monthly" ${r.freq === 'monthly' ? 'selected' : ''}>每月</option>
+            <option value="every_n" ${r.freq === 'every_n' ? 'selected' : ''}>每 N 個月</option>
+            <option value="yearly" ${r.freq === 'yearly' ? 'selected' : ''}>每年</option>
+            <option value="weekly" ${r.freq === 'weekly' ? 'selected' : ''}>每週</option>
+          </select>
+        </div>
+        <div class="field"><label>${nLabel}</label>
+          <input data-k="everyN" inputmode="numeric" value="${r.everyN ?? 1}" ${r.freq === 'monthly' ? 'disabled' : ''} />
+        </div>
+        <div class="field"><label>繳費日</label><input data-k="dueDay" inputmode="numeric" value="${r.dueDay ?? 1}" /></div>
+        <div class="field cat-field" style="grid-column:1/-2"><label>類別 · 每月需預留 ${fmt(mEq)}</label>
+          <input data-k="category" value="${esc(r.category || '')}" placeholder="例如：居住／保險" />
+        </div>
+        <button class="btn sm danger del" type="button">刪除</button>`;
+      div.querySelector('[data-k="name"]').addEventListener('input', e => {
+        r.name = e.target.value; markUser(); saveState();
+      });
+      div.querySelector('[data-k="category"]').addEventListener('input', e => {
+        r.category = e.target.value; markUser(); saveState();
+      });
+      div.querySelector('[data-k="amount"]').addEventListener('input', e => {
+        r.amount = num(e.target.value); markUser(); saveState(); renderSoft();
+      });
+      div.querySelector('[data-k="amount"]').addEventListener('change', () => saveRender());
+      div.querySelector('[data-k="freq"]').addEventListener('change', e => {
+        r.freq = e.target.value; markUser(); saveRender();
+      });
+      div.querySelector('[data-k="everyN"]').addEventListener('change', e => {
+        r.everyN = num(e.target.value); markUser(); saveRender();
+      });
+      div.querySelector('[data-k="dueDay"]').addEventListener('change', e => {
+        r.dueDay = Math.min(28, Math.max(1, parseInt(e.target.value, 10) || 1));
+        markUser(); saveRender();
+      });
+      div.querySelector('.del').addEventListener('click', () => {
+        state.recurrings.splice(idx, 1); markUser(); saveRender();
+      });
+      list.appendChild(div);
+    });
+    $('#recMeta').textContent = `共 ${state.recurrings.length} 項 · 月均 ${fmt(totalRecurringMonthly())}`;
+  }
+
+  function renderDue() {
+    const items = upcomingDues();
+    const el = $('#dueList');
+    if (!items.length) {
+      el.innerHTML = `<div class="hint">未來 30 天內沒有到期項目。</div>`;
+      return;
+    }
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    el.innerHTML = items.map(it => {
+      const ds = it.date.toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric', weekday: 'short' });
+      const diff = Math.round((it.date - today) / 86400000);
+      const when = diff === 0 ? '今天' : diff === 1 ? '明天' : `${diff} 天後`;
+      return `<div class="due">
+        <div>
+          <strong>${esc(it.name)}</strong>
+          <div class="when">${ds} · ${when}${it.category ? ' · ' + esc(it.category) : ''}</div>
+        </div>
+        <div style="text-align:right">
+          <strong>${fmt(it.amount)}</strong>
+          ${it.freq !== 'monthly' ? `<div class="when">每月預留 ${fmt(it.monthly)}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function saveRender(full = true) {
+    saveState();
+    if (full) renderAll();
+  }
+  function renderSoft() {
+    const income = totalIncome();
+    renderSummary();
+    updateAllocMeta(income);
+    $('#exampleBadge').classList.toggle('hidden', !state.isExample);
+    $$('.rec-item').forEach((div, idx) => {
+      const r = state.recurrings[idx];
+      if (!r) return;
+      const lab = div.querySelector('.cat-field label');
+      if (lab) lab.textContent = `類別 · 每月需預留 ${fmt(monthlyOf(r))}`;
+    });
+    $('#recMeta').textContent = `共 ${state.recurrings.length} 項 · 月均 ${fmt(totalRecurringMonthly())}`;
+  }
+  function renderAll() {
+    applyTheme();
+    renderSummary();
+    renderIncome();
+    renderAlloc();
+    renderRec();
+    renderDue();
+  }
+
+  $('#btnAddIncome').addEventListener('click', () => {
+    state.incomes.push({ id: uid(), name: '其他收入', amount: 0 });
+    markUser(); saveRender();
+  });
+  $('#btnAddAlloc').addEventListener('click', () => {
+    state.allocations.push({ id: uid(), name: '新類別', mode: 'pct', value: 0 });
+    state.template = 'custom'; markUser(); saveRender();
+  });
+  $('#btnAddRec').addEventListener('click', () => {
+    state.recurrings.push({ id: uid(), name: '新支出', amount: 0, freq: 'monthly', everyN: 1, category: '', dueDay: 1 });
+    markUser(); saveRender();
+  });
+  $('#templates').addEventListener('click', e => {
+    const btn = e.target.closest('[data-tpl]');
+    if (!btn) return;
+    const t = btn.dataset.tpl;
+    state.template = t;
+    if (t === '503020' || t === 'jars') {
+      state.allocations = TPL[t].map(a => ({ id: uid(), ...a }));
+    }
+    markUser(); saveRender();
+  });
+  $('#btnTheme').addEventListener('click', () => {
+    state.theme = state.theme === 'dark' ? 'light' : 'dark';
+    saveState(); applyTheme();
+  });
+  $('#btnClearExample').addEventListener('click', () => {
+    state.incomes = [{ id: uid(), name: '薪水', amount: 0 }];
+    state.recurrings = [];
+    state.allocations = TPL['503020'].map(a => ({ id: uid(), ...a }));
+    state.template = '503020';
+    state.isExample = false;
+    saveRender();
+  });
+  $('#btnExport').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `budget-planner-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+  $('#btnImport').addEventListener('click', () => $('#importFile').click());
+  $('#importFile').addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (!data || !Array.isArray(data.incomes) || !Array.isArray(data.allocations) || !Array.isArray(data.recurrings)) {
+        throw new Error('bad format');
+      }
+      state = data;
+      state.isExample = false;
+      saveRender();
+    } catch {
+      askConfirm('匯入失敗', '無法讀取這個 JSON，請確認是本工具匯出的備份。', null, true);
+    }
+  });
+
+  let confirmCb = null;
+  function askConfirm(title, msg, ok, hideCancel = false) {
+    $('#confirmTitle').textContent = title;
+    $('#confirmMsg').textContent = msg;
+    $('#confirmCancel').classList.toggle('hidden', !!hideCancel);
+    $('#confirmOk').textContent = hideCancel ? '知道了' : '確定';
+    confirmCb = ok;
+    $('#confirmModal').classList.add('show');
+  }
+  $('#confirmCancel').addEventListener('click', () => {
+    $('#confirmModal').classList.remove('show'); confirmCb = null;
+  });
+  $('#confirmOk').addEventListener('click', () => {
+    const cb = confirmCb; confirmCb = null;
+    $('#confirmModal').classList.remove('show');
+    if (cb) cb();
+  });
+  $('#btnReset').addEventListener('click', () => {
+    askConfirm('重置資料', '會清除目前所有設定，恢復成範例資料。確定嗎？', () => {
+      state = structuredClone(EXAMPLE);
+      saveRender();
+    });
+  });
+
+  applyTheme();
+  renderAll();
+})();
+</script>
+</body>
+</html>
